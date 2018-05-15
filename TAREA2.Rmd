@@ -1,0 +1,251 @@
+---
+title: "Tarea 2"
+author: "Carolina Rodriguez"
+date: "4/5/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts = list(width.cutoff = 50), tidy = TRUE, fig.pos = 'h', out.extra = '')
+
+```
+
+
+## Entrega
+
+La tarea debe ser realizada en RMarkdown en un repositorio de GitHub llamado "Tarea 2".
+La tarea es individual por lo que cada uno tiene que escribir su propia versión de la misma. 
+El repositorio debe contener unicamente el archivo .Rmd con la solución de la tarea.
+
+## Ejercicio 1
+
+Los datos que vamos a utilizar en este ejercicio están disponibles en el catálogo de datos abiertos uruguay https://catalogodatos.gub.uy.
+Los datos que seleccioné son sobre las emisiones de dióxido de carbono (CO2) correspondientes a las actividades de quema de los combustibles en las industrias de la energía y los sectores de consumo. Se incluyen también emisiones de CO2 provenientes de la quema de biomasa y de bunkers internacionales, las cuales se presentan como partidas informativas ya que no se consideran en los totales. En el siguiente link se encuentrán los datos y los meta datos con información que describe la base de datos https://catalogodatos.gub.uy/dataset/emisiones-de-co2-por-sector.
+
+Debe leer con cuidado la información en los meta datos para responder correctamente.
+
+```{r, message=FALSE, warning=FALSE, results='asis', echo=FALSE}
+library(tidyverse); library(xtable)
+
+dat <- read.csv("emisiones.csv", header = TRUE, dec = ",") 
+metadat <- read.csv("metadata_emision.csv", header = TRUE) 
+
+# xtable(metadat[,-2], align = 'ccp{2cm}p{8cm}' )  %>%
+#   print( include.rownames = FALSE)
+colnames(dat)[1] <- "AÑO"
+
+dato_emision<- gather(dat, key = fuente, value = emision, -AÑO)
+``` 
+
+Los datos fueron reestructurados para simplificar  la exploración, de la siguente manera:
+
+```{r, message=FALSE, warning=FALSE, results='asis', echo=TRUE, eval=FALSE}
+library(tidyverse)
+dato_emision<- gather(dat, key = fuente, value = emisión, -AÑO)
+```
+
+Con estos datos responda las sigueintes preguntas:
+
+_ 1._ Usando las funciones de la librería `dplyr` obtenga qué fuentes tienen la emisión máxima. Recuerde que TOTAL debería ser excluído para esta respuesta.
+ `
+ 
+ 
+```{r}
+filter(dato_emision,fuente!="TOTAL" & emision==max(emision,na.rm = TRUE))
+
+```
+La fuente con máxima emisión es Q_B, la cual refiere a quema de biomasa. 
+ 
+ 
+
+_ 2._ ¿En qué año se dió la emisión máxima para la fuente que respondió en la pregunta anterior?
+ 
+```{r}
+filter(dato_emision,fuente!="TOTAL" & emision==max(emision,na.rm = TRUE))
+
+```
+ Se da en el año 2016.
+ 
+
+3. Usando las funciones de la librería `dplyr` obtenga las 5 fuentes, sin incluir TOTAL, qué tienen un valor medio de emisión a lo largo de todos los años más grandes. 
+
+```{r}
+dato_emision%>%filter(fuente!="TOTAL" & fuente!="S_C"& fuente!="I_E")%>% group_by(fuente)%>%
+ summarise( media_fuente = mean(emision, na.rm = TRUE))%>%arrange(desc(media_fuente))%>%top_n(5)
+```
+
+
+
+4. Usando ggplot2 realice un gráfico de las emisiones a lo largo de los años para cada fuente. Utilice dos elementos geométricos, puntos y lineas. 
+Selecciones para dibujar solamente las 5 fuentes que a lo largo de los años tienen una emisión media mayor que el resto (respuesta de la pregunta 3).
+Las etiquetas de los ejes deben ser claras y describir las variables involucradas. Incluir un `caption` en la figura con algún comentario de interés que describa el gráfico.
+
+
+```{r,echo =FALSE}
+cap1 <- "Las emisiones de CO2 de quema de biomasa crecen exponencialmente a partir del año 2005, también se observa un crecimiento para el transporte pero es mucho más leve. La industria se mantiene en valores bajos y constantes para el periodo de análisis, mientras que el comportamiento de las emisiones para las centrales electricas  servicio público tienen un comportamiento bastante varaible."
+```
+
+
+
+```{r, echo = TRUE, fig.cap=cap1,warning=FALSE, message=FALSE}
+datos <- filter(dato_emision, !is.na(emision))%>%filter(fuente==c("Q_B","T","BI","CE_SP","I"))
+ggplot(datos, aes(x=AÑO, y=emision))+geom_point()+geom_line()+facet_wrap(~fuente)+labs(x="AÑOS", y="Emisiones de CO2")
+
+```
+
+
+5. Relplique el siguiente gráfico usando ggplot2.
+
+
+
+```{r}
+
+datos%>%ggplot(aes(x=fct_reorder(fuente,-emision),emision))+geom_boxplot()+labs(x="Fuentes con mayor emisión media entre 1990−2016", y="Emisión de CO2 en Gg")
+
+```
+
+
+6. Usando la librería ggplot2 y ggpmisc replique el siguiente gráfico de las emisiones totales entre 1990 y 2016.
+Los puntos rojos indican los máximos locales  o picos de emisión de CO2 en Gg. 
+Use `library(help = ggpmisc)` para ver todas las funciones de la librería ggpmisc e identificar cual o cuales necesita para replicar el gráfico.
+
+```{r}
+library(ggpmisc)
+library(tidyverse)
+dato_emision%>%filter(fuente=="TOTAL")%>% group_by(AÑO)%>%ggplot(aes(AÑO,emision))+geom_point()+geom_line()+labs(x="AÑO",y="Emisión de CO2 en Gg")+stat_peaks(colour = "red")+stat_peaks(geom = "text", colour="red")
+
+
+```
+
+## Ejercicio 2
+
+Los datos que vamos a utilizar en este ejercicio están disponibles en el catálogo de datos abiertos uruguay https://catalogodatos.gub.uy.
+
+Los datos que seleccioné son sobre los gastos realizados por actos médicos
+Los datos y los metadatos se encuentran disponibles en:
+
+https://catalogodatos.gub.uy/dataset/gasto_am_2016_fondo-nacional-de-recursos/resource/936ac9e6-b0f6-424a-9b53-ee408a91fd6f
+
+Este ejercicio tiene como objetivo que realice un análisis exploratorio de datos utilizando todo lo aprendido en el curso.
+Debe contener al menos 5 preguntas orientadoras y visualizaciones apropiadas para responderlas. 
+La exploración deberá contener las preguntas a responder sus respuestas con el correspondiente resumen de información o visualización. 
+Incluya en su exploración el análisis de la variabilidad tanto de  variables cuantitativas como cualitativas y covariaciones entre las mismas. 
+Recuerde que en las visualizaciones, las etiquetas de los ejes deben ser claras y describir las variables involucradas. Incluir un `caption` en la figura con algún comentario de interés que describa el gráfico.
+
+```{r, echo=FALSE}
+
+gastos <- read.csv("gastosmed.csv", header = TRUE, dec = ",") 
+
+```
+
+##1
+¿Qué tipo de variables contiene nuestra base de datos? en caso de tener variables categoricas ver los niveles de las mismas.
+
+```{r}
+names(gastos)            # nombres de las variables
+str(gastos)              # estructura del conjunto de datos
+dim(gastos)
+levels(gastos$Prestacion)
+levels(gastos$Sexo)
+levels(gastos$Departamento_residencia)
+levels(gastos$Prestador)
+levels(gastos$Prestador_tipo)
+levels(gastos$Prestador_departamento)
+
+```
+
+
+#2
+¿Cuánto se gastó por tipo de prestación y por sexo?
+
+
+
+```{r}
+group_by(gastos,Prestacion) %>%summarise(gastra=sum(Importe)) %>% arrange(desc(gastra))
+
+```
+#3
+¿Cuánto fue el gasto en tratamientos por edad?
+
+
+```{r}
+group_by(gastos,Edad_aÃ.os) %>%summarise(suma=sum(Importe)) %>% ggplot(aes(Edad_aÃ.os,suma))+geom_area()+labs(x="Edad", y="Total de gastos en tratamientos", title="Total de gastos en tratamiento según edad del paciente")
+
+
+```
+
+
+Esta gráfica resulta interesante para visualizar donde se encuentran los grupos de edad que más gastan en tratamietos médicos, veamos que pasa si lo faceteamos de acuerdo a al sexo.
+
+```{r}
+group_by(gastos,Edad_aÃ.os,Sexo) %>%summarise(suma=sum(Importe))%>% ggplot(aes(Edad_aÃ.os,suma))+geom_area()+labs(x="Edad", y="Total de gastos en tratamientos", title="Total de gastos en tratamiento según edad del paciente")+facet_wrap(~Sexo)
+
+
+```
+De acuerdo a los gáficos observamos que luego de los 50 años se gasta más en tratamientos para hombres que en mujeres, entre los 25 y los 45 el gasto por tratamiento en mujeres es mayor que en los hombres, esto se puede deber a la edad en que las mujeres quedan emabarazadas.
+
+
+
+Qué tratamientos son los que predominan por edad?
+
+```{r,echo=FALSE}
+cap2 <- {"Para este grupo de personas, la cantidad de tratamientos en personas de sexo masculino supera ampliamente al sexo femenino en todos los tipos de tratamiento excepto:implante de protesis de rodilla,protesis de cadera por fractura,protesis de cadera recambio y protesis de cadera por artrosis. El tratamiento que más se realizan los hombres en este grupo de edad son PCI-Cateterismo izq.adultos y PCIc/cateterismo izq."}
+```
+
+
+```{r, fig.cap=cap2}
+filter(gastos,Edad_aÃ.os>55 & Edad_aÃ.os<75 ) %>% group_by(Prestacion,Sexo) %>% summarise(cantidad=n()) %>% ggplot(aes(Prestacion,cantidad, fill=Sexo))+  geom_col(position = "dodge")+theme(axis.text.x = element_text(angle = 90))+coord_flip()+labs(title="Cantidad de tratamientos por Prestacion para personas entre 55 y 70 años, discriminado por sexo")
+
+```
+
+
+
+
+¿Cuántos tratamientos se realizaron por tipo de prestación y como se distribuyen entre sexo femenino y masculino? 
+
+
+```{r,echo=FALSE}
+cap3 <- {"Los tres tratamientos mas realizados son:PCI-cateterismo adulto izq, Dialisis-hemodialisis,PCI-ATPC c/cateterismo izq. Para la mayoría de las prestaciones, los hombres se realizan más tratamientos que las mujeres."}
+```
+
+
+
+```{r, fig.cap=cap3}
+
+library(ggplot2)
+library(tidyverse)
+ggplot(gastos,aes(x= fct_infreq(Prestacion),fill=Sexo))+geom_bar()+theme(axis.text.x = element_text(angle =90))+labs(x="tipo de tratamiento",y="Numero de tratamientos", title="Cantidad de tratamientos por tipo de prestación y sexo")+coord_flip()
+```
+
+Veamos el mismo gráfico en terminos del porcentaje:
+
+
+```{r}
+ggplot(gastos,aes(x= fct_infreq(Prestacion),fill=Sexo))+geom_bar(position="fill")+theme(axis.text.x = element_text(angle =90))+labs(x="tipo de tratamiento",y="Numero de tratamientos", title="Cantidad de tratamientos por tipo de prestación y sexo")+coord_flip()
+
+
+```
+
+Veamos ahora algunos gráficos que nos permiten visualizar las variaciones de los datos.
+
+Para el caso de variables cualitativas utilizamos graficos de barra.
+
+```{r}
+ggplot(gastos,aes(x=fct_infreq(Prestador_tipo)))+geom_bar()+labs(y="cantidad de pacientes",x="Tipo de prestador",title="cantidad de pacientes por tipo de prestador")
+```
+
+```{r}
+ggplot(gastos,aes(x=fct_infreq(Prestador_departamento)))+geom_bar()+labs(x="Departamento del prestador", y="Cantidad de pacientes",title="cantidad de pacientes por departamento del prestador")+theme(axis.text.x = element_text(angle = 90))
+```
+
+
+```{r}
+ggplot(gastos,aes(x=fct_infreq(Sexo)))+geom_bar()+labs(x="Sexo",y="cantidad de pacientes", title="cantidad de pacientes por sexo")
+```
+
+
+Para variables cuantitativas usamos boxplot si queremos mirar la variabilidad.
+
+```{r}
+ggplot(gastos, aes(x=fct_reorder(Prestador_tipo,Edad_aÃ.os),Edad_aÃ.os))+geom_boxplot()+labs(x="Tipo de prestador", y="Edad")
+```
